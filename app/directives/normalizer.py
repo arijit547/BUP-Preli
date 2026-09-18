@@ -22,6 +22,15 @@ def normalize_directive(
     # Canonicalize hours to sorted unique list
     sorted_hours = sorted(list(dict.fromkeys(adj.hours)))
 
+    if len(sorted_hours) == 0:
+        return DirectiveInterpretation(
+            note_index=interp.note_index,
+            applies=False,
+            directive_type=DirectiveType.NO_OP,
+            structured_adjustment=None,
+            explanation=interp.explanation or "No valid hours specified; treated as no_op.",
+        )
+
     if isinstance(adj, SolarReductionAdjustment):
         normalized_adj = SolarReductionAdjustment(hours=sorted_hours, factor=round(adj.factor, 6))
     elif isinstance(adj, ReserveAdjustment):

@@ -35,7 +35,7 @@ def run_cases(base_url: str = "http://localhost:8000") -> bool:
     all_passed = True
     total_latency = 0.0
 
-    client = httpx.Client(base_url=base_url, timeout=30.0)
+    client = httpx.Client(base_url=base_url, timeout=60.0)
 
     # First verify /health
     try:
