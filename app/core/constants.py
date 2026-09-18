@@ -4,13 +4,15 @@ from enum import Enum
 
 
 class DirectiveType(str, Enum):
-    """The six officially supported directive types in GridWise."""
+    """The supported directive types in GridWise."""
     SOLAR_REDUCTION = "solar_reduction"
     MINIMUM_BATTERY_RESERVE = "minimum_battery_reserve"
     NO_CHARGE_WINDOW = "no_charge_window"
     NO_DISCHARGE_WINDOW = "no_discharge_window"
     MAX_GRID_WINDOW = "max_grid_window"
     NO_OP = "no_op"
+    COST_OPTIMIZATION = "cost_optimization"
+
 
 
 class BatteryAction(str, Enum):
@@ -27,5 +29,5 @@ FLOAT_CLEANUP_EPS = 1e-9 # Values strictly below this are normalized to 0.0
 JUDGE_TOLERANCE = 0.01   # Official judging tolerance (0.01 kWh, 0.01 BDT)
 HOURS_PER_DAY = 24
 
-PROMPT_VERSION = "v1.0.0"
+PROMPT_VERSION = "v1.5.0"
 SCHEMA_VERSION = "v1.0.0"

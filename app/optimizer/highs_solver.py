@@ -125,7 +125,7 @@ def solve_campus_energy_lp(
     if not res.success:
         logger.error(
             "HiGHS optimization failed",
-            extra={"status": res.status, "message": res.message, "duration_ms": elapsed_ms},
+            extra={"solver_status": res.status, "solver_msg": res.message, "duration_ms": elapsed_ms},
         )
         raise SolverError(f"HiGHS solver failed: {res.message} (status {res.status})")
 

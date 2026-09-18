@@ -57,3 +57,5 @@ Thumbs.db
 credentials.json
 guide_text.txt
 problem_text.txt
+.cache/
+*.zip

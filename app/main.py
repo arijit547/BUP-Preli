@@ -95,7 +95,7 @@ async def replay_exception_handler(request: Request, exc: ReplayValidationError)
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Catch-all handler ensuring no stack traces or secrets are ever exposed."""
-    logger.error("Unhandled service exception", extra={"error_type": type(exc).__name__, "message": str(exc)})
+    logger.error("Unhandled service exception", extra={"error_type": type(exc).__name__, "err_detail": str(exc)})
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Optimization service internal error"},

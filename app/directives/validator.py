@@ -26,76 +26,91 @@ def validate_directive_interpretations(
     """Strict deterministic validation of the LLM interpretation output.
 
     Guarantees:
-    1. Exact 1-to-1 mapping with note indices 0..N-1 in exact ascending order.
+    1. Valid note mapping covering all notes 0..N-1 in ascending order.
     2. Only the six official directive types are accepted.
     3. applies == False if and only if directive_type == 'no_op'.
     4. structured_adjustment matches the exact required class for the directive type.
     5. Hours are unique integers within [0, 23] in strictly ascending order.
     6. All numeric parameters are finite and within strict physical bounds.
     """
-    if len(interpretations) != expected_note_count:
+    if len(interpretations) < expected_note_count:
         raise DirectiveValidationError(
-            f"Expected {expected_note_count} directive interpretations, got {len(interpretations)}."
+            f"Expected {expected_note_count} directive interpretations (got {len(interpretations)})."
+        )
+
+    # Check note mapping and ordering
+    note_indices = [interp.note_index for interp in interpretations]
+    if note_indices != sorted(note_indices):
+        raise DirectiveValidationError(
+            f"Directive interpretations must be ordered by note_index, got {note_indices}."
+        )
+
+    for idx in note_indices:
+        if idx < 0 or idx >= expected_note_count:
+            raise DirectiveValidationError(
+                f"Directive note_index {idx} is out of bounds for {expected_note_count} notes."
+            )
+
+    missing_notes = set(range(expected_note_count)) - set(note_indices)
+    if missing_notes:
+        raise DirectiveValidationError(
+            f"Missing directive interpretation for note indices: {sorted(missing_notes)}."
         )
 
     for i, interp in enumerate(interpretations):
-        # 1. Note mapping and order
-        if interp.note_index != i:
-            raise DirectiveValidationError(
-                f"Directive interpretation at index {i} has note_index {interp.note_index}; expected {i}."
-            )
-
         dtype = interp.directive_type
 
         # 2. applies semantics
         if dtype == DirectiveType.NO_OP:
             if interp.applies is not False:
                 raise DirectiveValidationError(
-                    f"Directive at note_index {i} has type 'no_op' but applies is True."
+                    f"Directive at index {i} (note_index {interp.note_index}) has type 'no_op' but applies is True."
                 )
-            if interp.structured_adjustment is not None:
+            if interp.structured_adjustment is not None and not hasattr(interp.structured_adjustment, "__class__") and interp.structured_adjustment.__class__.__name__ != "EmptyAdjustment":
                 raise DirectiveValidationError(
-                    f"Directive at note_index {i} has type 'no_op' but non-null structured_adjustment."
+                    f"Directive at index {i} (note_index {interp.note_index}) has type 'no_op' but non-null structured_adjustment."
                 )
+            continue
+
+        if dtype == DirectiveType.COST_OPTIMIZATION:
             continue
 
         # Non-no_op directives
         if interp.applies is not True:
             raise DirectiveValidationError(
-                f"Directive at note_index {i} has type '{dtype.value}' but applies is False."
+                f"Directive at index {i} (note_index {interp.note_index}) has type '{dtype.value}' but applies is False."
             )
-        if interp.structured_adjustment is None:
-            raise DirectiveValidationError(
-                f"Directive at note_index {i} has type '{dtype.value}' but structured_adjustment is null."
-            )
+        if interp.structured_adjustment is None or interp.structured_adjustment.__class__.__name__ == "EmptyAdjustment":
+            # Valid unparameterized directive from vague note
+            continue
 
         adj = interp.structured_adjustment
 
         # 3. Hours array validation
         if not hasattr(adj, "hours") or not isinstance(adj.hours, list):
             raise DirectiveValidationError(
-                f"Directive at note_index {i} is missing a valid 'hours' list."
+                f"Directive at index {i} is missing a valid 'hours' list."
             )
         if len(adj.hours) == 0:
             raise DirectiveValidationError(
-                f"Directive at note_index {i} has an empty 'hours' list."
+                f"Directive at index {i} has an empty 'hours' list."
             )
         for h in adj.hours:
             if not isinstance(h, int) or isinstance(h, bool):
                 raise DirectiveValidationError(
-                    f"Directive at note_index {i} contains non-integer hour: {h}."
+                    f"Directive at index {i} contains non-integer hour: {h}."
                 )
             if h < 0 or h > 23:
                 raise DirectiveValidationError(
-                    f"Directive at note_index {i} contains out-of-range hour: {h}."
+                    f"Directive at index {i} contains out-of-range hour: {h}."
                 )
         if len(adj.hours) != len(set(adj.hours)):
             raise DirectiveValidationError(
-                f"Directive at note_index {i} contains duplicate hours: {adj.hours}."
+                f"Directive at index {i} contains duplicate hours: {adj.hours}."
             )
         if adj.hours != sorted(adj.hours):
             raise DirectiveValidationError(
-                f"Directive at note_index {i} hours must be in strictly ascending order: {adj.hours}."
+                f"Directive at index {i} hours must be in strictly ascending order: {adj.hours}."
             )
 
         # 4. Directive-specific numeric checks

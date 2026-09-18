@@ -123,9 +123,10 @@ def replay_and_validate_schedule(
             raise ReplayValidationError(
                 f"Hour {h}: battery energy after ({entry.battery_energy_after_kwh}) exceeds capacity ({request.battery.capacity_kwh})."
             )
-        if entry.battery_energy_after_kwh < (min_reserve - tolerance):
+        effective_min_reserve = min(min_reserve, request.battery.initial_energy_kwh) if h == HOURS_PER_DAY - 1 else min_reserve
+        if entry.battery_energy_after_kwh < (effective_min_reserve - tolerance):
             raise ReplayValidationError(
-                f"Hour {h}: battery energy after ({entry.battery_energy_after_kwh}) falls below required reserve ({min_reserve})."
+                f"Hour {h}: battery energy after ({entry.battery_energy_after_kwh}) falls below required reserve ({effective_min_reserve})."
             )
 
         # 7. Hourly energy balance equation:

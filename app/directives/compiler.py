@@ -41,11 +41,11 @@ def compile_directives(
 
     # 2. Sequentially apply validated directives
     for interp in directives:
-        if not interp.applies or interp.directive_type == DirectiveType.NO_OP:
+        if not interp.applies or interp.directive_type in (DirectiveType.NO_OP, DirectiveType.COST_OPTIMIZATION):
             continue
 
         adj = interp.structured_adjustment
-        if adj is None:
+        if adj is None or adj.__class__.__name__ == "EmptyAdjustment":
             continue
 
         if interp.directive_type == DirectiveType.SOLAR_REDUCTION:

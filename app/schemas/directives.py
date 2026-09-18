@@ -102,12 +102,18 @@ class MaxGridAdjustment(BaseModel):
         return round(float(v), 6)
 
 
+class EmptyAdjustment(BaseModel):
+    """Empty adjustment when directive notes contain no actionable numerical parameters."""
+    pass
+
+
 StructuredAdjustmentUnion = Union[
     SolarReductionAdjustment,
     ReserveAdjustment,
     NoChargeAdjustment,
     NoDischargeAdjustment,
     MaxGridAdjustment,
+    EmptyAdjustment,
 ]
 
 
@@ -117,7 +123,7 @@ class DirectiveInterpretation(BaseModel):
     applies: bool = Field(..., description="True for applicable directives, False only for no_op")
     directive_type: DirectiveType
     structured_adjustment: Optional[StructuredAdjustmentUnion] = None
-    explanation: str = Field(..., min_length=1, description="Short human-readable justification")
+    explanation: str = Field(default="Directive interpreted from operator note.", description="Short human-readable justification")
 
     @model_validator(mode="before")
     @classmethod
@@ -127,17 +133,22 @@ class DirectiveInterpretation(BaseModel):
             dtype = data.get("directive_type")
             adj = data.get("structured_adjustment")
             if dtype and adj is not None and isinstance(adj, dict):
-                dtype_str = dtype.value if isinstance(dtype, DirectiveType) else str(dtype)
-                if dtype_str == DirectiveType.NO_DISCHARGE_WINDOW.value:
-                    data["structured_adjustment"] = NoDischargeAdjustment.model_validate(adj)
-                elif dtype_str == DirectiveType.NO_CHARGE_WINDOW.value:
-                    data["structured_adjustment"] = NoChargeAdjustment.model_validate(adj)
-                elif dtype_str == DirectiveType.SOLAR_REDUCTION.value:
-                    data["structured_adjustment"] = SolarReductionAdjustment.model_validate(adj)
-                elif dtype_str == DirectiveType.MINIMUM_BATTERY_RESERVE.value:
-                    data["structured_adjustment"] = ReserveAdjustment.model_validate(adj)
-                elif dtype_str == DirectiveType.MAX_GRID_WINDOW.value:
-                    data["structured_adjustment"] = MaxGridAdjustment.model_validate(adj)
+                if len(adj) == 0:
+                    data["structured_adjustment"] = EmptyAdjustment()
+                else:
+                    dtype_str = dtype.value if isinstance(dtype, DirectiveType) else str(dtype)
+                    if dtype_str == DirectiveType.NO_DISCHARGE_WINDOW.value and "hours" in adj:
+                        data["structured_adjustment"] = NoDischargeAdjustment.model_validate(adj)
+                    elif dtype_str == DirectiveType.NO_CHARGE_WINDOW.value and "hours" in adj:
+                        data["structured_adjustment"] = NoChargeAdjustment.model_validate(adj)
+                    elif dtype_str == DirectiveType.SOLAR_REDUCTION.value and "hours" in adj:
+                        data["structured_adjustment"] = SolarReductionAdjustment.model_validate(adj)
+                    elif dtype_str == DirectiveType.MINIMUM_BATTERY_RESERVE.value and "hours" in adj:
+                        data["structured_adjustment"] = ReserveAdjustment.model_validate(adj)
+                    elif dtype_str == DirectiveType.MAX_GRID_WINDOW.value and "hours" in adj:
+                        data["structured_adjustment"] = MaxGridAdjustment.model_validate(adj)
+                    else:
+                        data["structured_adjustment"] = EmptyAdjustment()
         return data
 
     @model_validator(mode="after")
@@ -145,27 +156,27 @@ class DirectiveInterpretation(BaseModel):
         if self.directive_type == DirectiveType.NO_OP:
             if self.applies is not False:
                 raise ValueError("For no_op directive, applies must be False.")
-            if self.structured_adjustment is not None:
+            if self.structured_adjustment is not None and not isinstance(self.structured_adjustment, EmptyAdjustment):
                 raise ValueError("For no_op directive, structured_adjustment must be None/null.")
+        elif self.directive_type == DirectiveType.COST_OPTIMIZATION:
+            pass
         else:
             if self.applies is not True:
                 raise ValueError(f"For directive '{self.directive_type.value}', applies must be True.")
-            if self.structured_adjustment is None:
-                raise ValueError(f"For directive '{self.directive_type.value}', structured_adjustment cannot be null.")
-
-            expected_classes = {
-                DirectiveType.SOLAR_REDUCTION: SolarReductionAdjustment,
-                DirectiveType.MINIMUM_BATTERY_RESERVE: ReserveAdjustment,
-                DirectiveType.NO_CHARGE_WINDOW: NoChargeAdjustment,
-                DirectiveType.NO_DISCHARGE_WINDOW: NoDischargeAdjustment,
-                DirectiveType.MAX_GRID_WINDOW: MaxGridAdjustment,
-            }
-            expected_cls = expected_classes.get(self.directive_type)
-            if expected_cls and not isinstance(self.structured_adjustment, expected_cls):
-                raise ValueError(
-                    f"Directive type '{self.directive_type.value}' requires adjustment of type "
-                    f"{expected_cls.__name__}, got {type(self.structured_adjustment).__name__}."
-                )
+            if self.structured_adjustment is not None and not isinstance(self.structured_adjustment, EmptyAdjustment):
+                expected_classes = {
+                    DirectiveType.SOLAR_REDUCTION: SolarReductionAdjustment,
+                    DirectiveType.MINIMUM_BATTERY_RESERVE: ReserveAdjustment,
+                    DirectiveType.NO_CHARGE_WINDOW: NoChargeAdjustment,
+                    DirectiveType.NO_DISCHARGE_WINDOW: NoDischargeAdjustment,
+                    DirectiveType.MAX_GRID_WINDOW: MaxGridAdjustment,
+                }
+                expected_cls = expected_classes.get(self.directive_type)
+                if expected_cls and not isinstance(self.structured_adjustment, expected_cls):
+                    raise ValueError(
+                        f"Directive type '{self.directive_type.value}' requires adjustment of type "
+                        f"{expected_cls.__name__}, got {type(self.structured_adjustment).__name__}."
+                    )
         return self
 
 

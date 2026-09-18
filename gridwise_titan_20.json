@@ -1,0 +1,642 @@
+{
+  "meta": {
+    "title": "GridWise TITAN-20 — 20 Extreme Adversarial System Breakers",
+    "description": "20 ultra-adversarial scenarios engineered to be 10x harder than Killer-10. Targets: semantic retractions, archaic Sadhu/Sylheti dialects, MW-to-kWh unit conversions, counterfactuals, double negations, fractional math, razor-thin LP feasibility boundaries, and multi-note interlocking constraints.",
+    "default_battery": {
+      "capacity_kwh": 400,
+      "initial_energy_kwh": 200,
+      "minimum_energy_kwh": 40,
+      "max_charge_kwh_per_hour": 80,
+      "max_discharge_kwh_per_hour": 80
+    }
+  },
+  "titan_tests": [
+    {
+      "id": "TITAN-01",
+      "title": "The Intra-Note Retraction & Substitution Trap",
+      "difficulty": "TITANIC",
+      "category": "linguistic_adversarial",
+      "attack_vector": "Explicit retraction within a single note: 'scratch that earlier plan' + valid alternative directive",
+      "description": "The note initially mentions capping grid import at 60 kWh from 7 PM to 10 PM (which would cause severe infeasibility), but explicitly cancels it mid-sentence ('scratch that plan completely; disregard it'). It then introduces a valid solar cleaning directive for 11 AM to 2 PM reducing generation by three quarters (factor=0.25). The LLM must not extract the retracted grid cap.",
+      "operator_notes": [
+        "We initially planned to cap grid import at 60 units from 7 PM to 10 PM, but scratch that plan completely and disregard it; however, the rooftop solar array wash from 11 AM to 2 PM is confirmed and will reduce generation by three quarters."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [11, 12, 13],
+            "factor": 0.25
+          },
+          "explanation": "Solar reduction of 75% (factor 0.25) from 11 AM to 2 PM. The retracted grid cap must be ignored."
+        }
+      ],
+      "validation_rules": {
+        "must_not_be_max_grid": true,
+        "directive_type": "solar_reduction",
+        "factor": 0.25,
+        "hours": [11, 12, 13]
+      }
+    },
+    {
+      "id": "TITAN-02",
+      "title": "Engineering Unit Conversion: Megawatts (MW) to kWh",
+      "difficulty": "TITANIC",
+      "category": "numerical_reasoning",
+      "attack_vector": "Industrial power units (MW) requiring mathematical conversion to hourly energy (kWh)",
+      "description": "The note specifies a grid import limit in Megawatts: '0.09 MW'. In a 1-hour interval, 0.09 MW = 90 kW = 90 kWh. Naive LLMs copy 0.09 (which chokes the optimizer with near-zero grid) or 90000. It must convert 0.09 MW -> 90 kWh.",
+      "operator_notes": [
+        "Due to substation 33kV busbar thermal stress, grid intake cannot exceed 0.09 MW in any hour between 18:00 and 22:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [18, 19, 20, 21],
+            "max_grid_kwh": 90.0
+          },
+          "explanation": "0.09 MW equals 90 kWh per hour from 6 PM to 10 PM."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "max_grid_window",
+        "max_grid_kwh": 90.0,
+        "tolerance": 5.0,
+        "hours": [18, 19, 20, 21]
+      }
+    },
+    {
+      "id": "TITAN-03",
+      "title": "Classical Sadhu Bhasha (সাধু ভাষা) Archaic Bengali Directive",
+      "difficulty": "TITANIC",
+      "category": "multilingual_archaic",
+      "attack_vector": "19th century archaic literary Bengali (Sadhu Bhasha) syntax and vocabulary",
+      "description": "Uses archaic high-register Sanskritized Bengali: 'অদ্য অপরাহ্ন দ্বি-ঘটিকায় সৌর প্যানেলসমূহের সংযোগ বিচ্ছিন্নকরণপূর্বক অপরাহ্ন পঞ্চ-ঘটিকা পর্যন্ত সৌর বিদ্যুৎ উৎপাদন সম্পূর্ণরূপে স্থগিত থাকিবে।' (Today at 2 PM disconnecting solar panels until 5 PM, solar generation will remain completely suspended).",
+      "operator_notes": [
+        "অদ্য অপরাহ্ন দ্বি-ঘটিকায় সৌর প্যানেলসমূহের সংযোগ বিচ্ছিন্নকরণপূর্বক অপরাহ্ন পঞ্চ-ঘটিকা পর্যন্ত সৌর বিদ্যুৎ উৎপাদন সম্পূর্ণরূপে স্থগিত থাকিবে।"
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [14, 15, 16],
+            "factor": 0.0
+          },
+          "explanation": "2 PM to 5 PM (hours 14, 15, 16) complete solar shutdown (factor 0.0)."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "solar_reduction",
+        "factor": 0.0,
+        "hours": [14, 15, 16]
+      }
+    },
+    {
+      "id": "TITAN-04",
+      "title": "The Multi-Tier Fraction & Ratio Array Failure Trap",
+      "difficulty": "TITANIC",
+      "category": "multi_step_arithmetic",
+      "attack_vector": "Compound fractional loss: Sub-array trip (3/5) + partial derating of remainder",
+      "description": "3/5 of the solar array trips completely (yields 0). The remaining 2/5 of the array runs at half capacity (50%). Total remaining generation factor = (2/5) * 0.50 = 0.20 (20% of nominal). Hours: 1 PM to 4 PM (hours [13, 14, 15]).",
+      "operator_notes": [
+        "Inverter cluster A (three-fifths of our total rooftop capacity) will be offline from 1 PM to 4 PM, and the surviving two-fifths of panels will operate at only 50% efficiency during that time."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [13, 14, 15],
+            "factor": 0.2
+          },
+          "explanation": "Remaining capacity is 2/5 * 50% = 20% (factor 0.20) for hours 13, 14, 15."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "solar_reduction",
+        "factor": 0.2,
+        "tolerance": 0.05,
+        "hours": [13, 14, 15]
+      }
+    },
+    {
+      "id": "TITAN-05",
+      "title": "The Counterfactual Past Subjunctive Trap ('Had it not been for...')",
+      "difficulty": "TITANIC",
+      "category": "counterfactual_reasoning",
+      "attack_vector": "Grammatically counterfactual conditional expressing an action that was NOT taken",
+      "description": "The note states: 'Had the storm warning escalated we would have locked battery reserve at 95% from 6 PM to midnight, but with the alert canceled, standard dispatch rules apply.' This is a classic false-positive lure. The directive was never activated. Expected: no_op.",
+      "operator_notes": [
+        "Had the coastal depression escalated into a cyclone we would have locked battery reserve at 95% from 6 PM to midnight, but with the alert canceled, normal dispatch schedule remains in force."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Counterfactual statement describing a canceled contingency plan. No operational change."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "no_op",
+        "applies": false
+      }
+    },
+    {
+      "id": "TITAN-06",
+      "title": "Sylheti Dialect Phonetic Directives (সিলেটি চল)",
+      "difficulty": "TITANIC",
+      "category": "multilingual_dialect",
+      "attack_vector": "Sylheti regional spoken dialect written in Bengali script with localized idioms",
+      "description": "'আইজকা রাইত বারোটা থাইকা বিয়ান পাঁচটা তক ব্যাটারি থনে কুনু কারেন্ট বাইর করন যাইতো নায়, পুরাপুরি বন্ধ রাখবা।' (Today from 12 midnight to 5 morning, no current can be taken out from battery, keep completely closed). Maps to no_discharge_window from 00:00 to 05:00 (hours [0, 1, 2, 3, 4]).",
+      "operator_notes": [
+        "আইজকা রাইত বারোটা থাইকা বিয়ান পাঁচটা তক ব্যাটারি থনে কুনু কারেন্ট বাইর করন যাইতো নায়, পুরাপুরি বন্ধ রাখবা।"
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [0, 1, 2, 3, 4]
+          },
+          "explanation": "No battery discharge from midnight (12 AM) to 5 AM."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "no_discharge_window",
+        "hours": [0, 1, 2, 3, 4]
+      }
+    },
+    {
+      "id": "TITAN-07",
+      "title": "Inter-Note Nullification & Redirection Across Notes 0 and 1",
+      "difficulty": "TITANIC",
+      "category": "inter_note_dependency",
+      "attack_vector": "Note 1 explicitly rescinds and replaces Note 0",
+      "description": "Note 0 requests a complete halt on battery charging between 14:00 and 18:00. Note 1 states: 'Superintendent override: Cancel Note 0's charging ban; instead, enforce a minimum 160 kWh reserve during those same afternoon hours.' Note 0 becomes no_op (or superseded), Note 1 is minimum_battery_reserve of 160 kWh.",
+      "operator_notes": [
+        "Prohibit all battery charging from 2 PM to 6 PM for cell temperature monitoring.",
+        "Superintendent override regarding the previous note: cancel the charging ban completely; instead, maintain at least 160 kWh battery reserve during those exact same afternoon hours (2 PM to 6 PM)."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Overridden and canceled by Note 1."
+        },
+        {
+          "note_index": 1,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [14, 15, 16, 17],
+            "minimum_energy_kwh": 160.0
+          },
+          "explanation": "Maintains 160 kWh reserve between 2 PM and 6 PM."
+        }
+      ],
+      "validation_rules": {
+        "note_0_is_no_op_or_canceled": true,
+        "note_1_directive_type": "minimum_battery_reserve",
+        "note_1_min_energy": 160.0,
+        "note_1_hours": [14, 15, 16, 17]
+      }
+    },
+    {
+      "id": "TITAN-08",
+      "title": "Relative Astronomical Time Reference (Solar Noon Offset)",
+      "difficulty": "TITANIC",
+      "category": "temporal_reasoning",
+      "attack_vector": "Time defined relative to 'solar noon' (12:00) with backward and forward duration offsets",
+      "description": "'Beginning two hours prior to solar noon and enduring for a total duration of five hours, dust deposition will restrict solar yield to roughly one-fourth.' Solar noon = 12:00. 2 hours prior = 10:00. Duration 5 hours = 10:00 to 15:00 (hours [10, 11, 12, 13, 14]). Factor = 0.25.",
+      "operator_notes": [
+        "Beginning two hours prior to solar noon (12:00) and enduring for a total duration of five hours, atmospheric dust deposition will restrict solar yield to roughly one-fourth."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [10, 11, 12, 13, 14],
+            "factor": 0.25
+          },
+          "explanation": "10 AM to 3 PM (5 hours starting 2 hours before 12:00), factor 0.25."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "solar_reduction",
+        "factor": 0.25,
+        "hours": [10, 11, 12, 13, 14]
+      }
+    },
+    {
+      "id": "TITAN-09",
+      "title": "Reversed Temporal Phrasing ('End-before-Start') Syntax",
+      "difficulty": "TITANIC",
+      "category": "linguistic_syntax",
+      "attack_vector": "Sentence structure places the termination timestamp before the commencement timestamp",
+      "description": "'Until 6 AM counting backwards from 1 AM, the battery must remain strictly on idle or discharge only, completely barring any charging.' End is 6 AM, start is 1 AM. Target hours are 1 AM to 6 AM (hours [1, 2, 3, 4, 5]). Directive: no_charge_window.",
+      "operator_notes": [
+        "Until 6 AM starting from 1 AM, the battery must remain strictly on idle or discharge, completely barring any charging."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [1, 2, 3, 4, 5]
+          },
+          "explanation": "No charging between 1 AM and 6 AM."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "no_charge_window",
+        "hours": [1, 2, 3, 4, 5]
+      }
+    },
+    {
+      "id": "TITAN-10",
+      "title": "Industrial Microgrid Distractor (HVAC + Chiller + Diesel RPM)",
+      "difficulty": "TITANIC",
+      "category": "domain_distractor",
+      "attack_vector": "High-density technical power engineering jargon that does NOT map to microgrid schedule directives",
+      "description": "Mentions chillers, cooling tons, diesel generator synchronization at 1500 RPM, power factor 0.85 lagging, and harmonic distortion between 14:00 and 17:00. Sounds intensely actionable to naive LLMs, but is completely outside the microgrid LP formulation. Expected: no_op.",
+      "operator_notes": [
+        "Centrifugal Chiller #2 requires 250 tons of refrigeration and the emergency backup diesel generator will synchronize at 1500 RPM with 0.85 lagging power factor between 2 PM and 5 PM for harmonic mitigation."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Internal mechanical HVAC and diesel generator synchronization note with no microgrid dispatch directives."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "no_op",
+        "applies": false
+      }
+    },
+    {
+      "id": "TITAN-11",
+      "title": "Midnight Wrap with Negative Delta Phrasing ('3h before midnight to 2h after')",
+      "difficulty": "TITANIC",
+      "category": "temporal_boundary",
+      "attack_vector": "Time span defined as negative/positive offsets across the day boundary",
+      "description": "'Prevent battery charging starting three hours before midnight until two hours after midnight.' 3h before midnight = 21:00 (9 PM). 2h after midnight = 02:00 (2 AM). Window spans: 21, 22, 23, 0, 1. Must be returned in strictly sorted ascending order: [0, 1, 21, 22, 23].",
+      "operator_notes": [
+        "Prevent battery charging starting three hours before midnight until two hours after midnight for firmware recalibration."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [0, 1, 21, 22, 23]
+          },
+          "explanation": "No charge from 21:00 to 02:00, sorted as [0, 1, 21, 22, 23]."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "no_charge_window",
+        "hours": [0, 1, 21, 22, 23]
+      }
+    },
+    {
+      "id": "TITAN-12",
+      "title": "The Razor's Edge: Exact Mathematical Feasibility Boundary",
+      "difficulty": "TITANIC",
+      "category": "optimizer_precision",
+      "attack_vector": "Tightest possible constraint boundary: Demand (180) == Max Grid (100) + Max Battery Discharge (80)",
+      "description": "At peak hour 19, demand is 180 kWh, solar is 0, battery max discharge is 80 kWh. Grid cap is set to exactly 100 kWh. 100 + 80 = 180 kWh exactly! Any numerical drift or premature rounding in the LP will cause false infeasibility.",
+      "operator_notes": [
+        "National grid transmission corridor congestion: grid intake must not exceed 100 kWh per hour between 7 PM and 9 PM."
+      ],
+      "battery_override": {
+        "capacity_kwh": 400,
+        "initial_energy_kwh": 250,
+        "minimum_energy_kwh": 40,
+        "max_charge_kwh_per_hour": 80,
+        "max_discharge_kwh_per_hour": 80
+      },
+      "demand_profile": "calibrated_tight_peak_180",
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [19, 20],
+            "max_grid_kwh": 100.0
+          },
+          "explanation": "Grid capped at 100 kWh during hours 19 and 20."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "max_grid_window",
+        "max_grid_kwh": 100.0,
+        "hours": [19, 20],
+        "must_be_feasible": true
+      }
+    },
+    {
+      "id": "TITAN-13",
+      "title": "Complementary Percentage Contrast ('30% Loss' vs 'at 30% of Normal')",
+      "difficulty": "TITANIC",
+      "category": "factor_inversion_pair",
+      "attack_vector": "Two contradictory percentage representations in the same context",
+      "description": "Note specifies: 'Morning fog will cause a 30% reduction in solar output from 8 AM to 11 AM, whereas midday dust means solar will operate AT 30% of normal capacity from 11 AM to 2 PM.' Note 0 must have factor=0.70 (1.0 - 0.30) for hours [8, 9, 10]. Note 1 must have factor=0.30 for hours [11, 12, 13].",
+      "operator_notes": [
+        "Morning fog will cause a 30% reduction in solar output from 8 AM to 11 AM.",
+        "Midday dust buildup means solar will operate at only 30% of nominal capacity from 11 AM to 2 PM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [8, 9, 10],
+            "factor": 0.7
+          },
+          "explanation": "30% reduction = 70% remaining (factor 0.70) from 8 AM to 11 AM."
+        },
+        {
+          "note_index": 1,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [11, 12, 13],
+            "factor": 0.3
+          },
+          "explanation": "Operate AT 30% = 30% remaining (factor 0.30) from 11 AM to 2 PM."
+        }
+      ],
+      "validation_rules": {
+        "note_0_factor": 0.7,
+        "note_1_factor": 0.3,
+        "tolerance": 0.05
+      }
+    },
+    {
+      "id": "TITAN-14",
+      "title": "C-Rate Thermal Protection Phrased as Reserve Percentage",
+      "difficulty": "TITANIC",
+      "category": "fraction_to_kwh",
+      "attack_vector": "Vulgar fractions ('three-quarters of total capacity') computed against battery capacity",
+      "description": "'To preserve battery electrolyte stability under extreme heat, maintain at least three-quarters of total battery capacity in reserve between 12:00 and 16:00.' Battery capacity is 400 kWh. Three-quarters (3/4 = 0.75) * 400 = 300 kWh. Hours: [12, 13, 14, 15].",
+      "operator_notes": [
+        "To preserve battery electrolyte stability under ambient heat, maintain at least three-quarters of total battery capacity as reserve between 12:00 and 16:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [12, 13, 14, 15],
+            "minimum_energy_kwh": 300.0
+          },
+          "explanation": "3/4 of 400 kWh capacity = 300 kWh reserve for hours 12, 13, 14, 15."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "minimum_battery_reserve",
+        "minimum_energy_kwh": 300.0,
+        "tolerance": 10.0,
+        "hours": [12, 13, 14, 15]
+      }
+    },
+    {
+      "id": "TITAN-15",
+      "title": "Single-Hour Boundary Transition at Midnight (Hour 23 Exactly)",
+      "difficulty": "TITANIC",
+      "category": "boundary_precision",
+      "attack_vector": "Boundary expression that maps to a single final hour of the optimization day",
+      "description": "'From 23:00 to 00:00, battery must not discharge under any circumstance.' The interval [23, 24) maps strictly to hour 23. It must not spill into hour 0 of the next day or empty the list.",
+      "operator_notes": [
+        "From 23:00 to 00:00 midnight, the battery must not discharge under any circumstance."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [23]
+          },
+          "explanation": "Strictly hour 23 (11 PM to midnight)."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "no_discharge_window",
+        "hours": [23]
+      }
+    },
+    {
+      "id": "TITAN-16",
+      "title": "Mixed Code-Switching with Parenthetical Legal/Bureaucratic Noise",
+      "difficulty": "TITANIC",
+      "category": "noise_immunity",
+      "attack_vector": "Code-switching surrounded by heavy bureaucratic and regulatory boilerplate",
+      "description": "'Transformer safety hazard er karone shokal 8ta theke dupur 12ta porjonto grid theke সর্বোচ্চ 110 unit er beshi ana jabe na (Ref: BPDB Safety Circular 2026/04-B, mandatory compliance for all BUP campus substations).' Must extract max_grid_window 110 kWh for hours [8, 9, 10, 11] without getting tripped by reference numbers or bureaucratic text.",
+      "operator_notes": [
+        "Transformer safety hazard er karone shokal 8ta theke dupur 12ta porjonto grid theke সর্বোচ্চ 110 unit er beshi ana jabe na (Ref: BPDB Safety Circular 2026/04-B, mandatory compliance for all campus substations)."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [8, 9, 10, 11],
+            "max_grid_kwh": 110.0
+          },
+          "explanation": "8 AM to 12 PM (hours 8, 9, 10, 11) grid cap of 110 kWh."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "max_grid_window",
+        "max_grid_kwh": 110.0,
+        "hours": [8, 9, 10, 11]
+      }
+    },
+    {
+      "id": "TITAN-17",
+      "title": "Corporate PR Announcement vs Actionable Grid Policy Blend",
+      "difficulty": "TITANIC",
+      "category": "distractor_filter",
+      "attack_vector": "3 notes: Two corporate sustainability PR notices sandwiching a real operational grid cap",
+      "description": "Note 0: Vice Chancellor signs Net Zero Charter (no_op). Note 1: Grid draw must stay below 95 kWh from 5 PM to 9 PM (max_grid_window). Note 2: Auditorium hosts sustainability gala at 3 PM (no_op).",
+      "operator_notes": [
+        "The Vice Chancellor officially ratified the BUP Green Campus 2030 Sustainability Charter this morning.",
+        "Under the charter interim protocol, grid draw must stay below 95 kWh between 5 PM and 9 PM today.",
+        "The annual sustainability gala and prize distribution will take place in the central auditorium at 3 PM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "PR announcement of sustainability charter ratification."
+        },
+        {
+          "note_index": 1,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [17, 18, 19, 20],
+            "max_grid_kwh": 95.0
+          },
+          "explanation": "Grid capped at 95 kWh from 5 PM to 9 PM."
+        },
+        {
+          "note_index": 2,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Announcement regarding auditorium gala event."
+        }
+      ],
+      "validation_rules": {
+        "note_0_is_no_op": true,
+        "note_1_is_max_grid": true,
+        "note_1_max_grid": 95.0,
+        "note_1_hours": [17, 18, 19, 20],
+        "note_2_is_no_op": true
+      }
+    },
+    {
+      "id": "TITAN-18",
+      "title": "Chittagonian Regional Dialect (চাটগাঁইয়া বুলি)",
+      "difficulty": "TITANIC",
+      "category": "multilingual_dialect",
+      "attack_vector": "Chittagonian regional dialect phonology and vocabulary",
+      "description": "'আইজ্জা দুপুর বারোটা তন তিনটা পয্যন্ত সোলার প্যানেল ধোয়াই চলিবু, এনদে বিদ্যুৎ উৎপাদন আড়াই আনা (২৫%) অইবো।' (Today from 12 noon to 3 PM solar panel washing will go on, production will be 25%). Hours [12, 13, 14], factor 0.25.",
+      "operator_notes": [
+        "আইজ্জা দুপুর বারোটা তন তিনটা পয্যন্ত সোলার প্যানেল ধোয়াই চলিবু, এনদে বিদ্যুৎ উৎপাদন ২৫% অইবো।"
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [12, 13, 14],
+            "factor": 0.25
+          },
+          "explanation": "12 PM to 3 PM (hours 12, 13, 14) solar reduction to 25% (factor 0.25)."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "solar_reduction",
+        "factor": 0.25,
+        "hours": [12, 13, 14]
+      }
+    },
+    {
+      "id": "TITAN-19",
+      "title": "Extreme Multi-Hour Disjoint Range in Banglish",
+      "difficulty": "TITANIC",
+      "category": "disjoint_temporal_windows",
+      "attack_vector": "Single note imposing non-contiguous multi-window charging restrictions",
+      "description": "'Shokal 6ta theke 8ta ebong abar bikal 4ta theke 6ta porjonto battery charge kora ekdom bondho thakbe.' Two windows: 6 AM to 8 AM ([6, 7]) and 4 PM to 6 PM ([16, 17]). Combined sorted hours: [6, 7, 16, 17].",
+      "operator_notes": [
+        "Shokal 6ta theke 8ta ebong abar bikal 4ta theke 6ta porjonto battery charge kora ekdom bondho thakbe."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [6, 7, 16, 17]
+          },
+          "explanation": "No charge during two separate intervals: 6-8 AM and 4-6 PM."
+        }
+      ],
+      "validation_rules": {
+        "directive_type": "no_charge_window",
+        "hours": [6, 7, 16, 17]
+      }
+    },
+    {
+      "id": "TITAN-20",
+      "title": "The Grand Interlocking Tri-Directive Harmony Puzzle",
+      "difficulty": "TITANIC",
+      "category": "multi_directive_coordination",
+      "attack_vector": "Three interlocking, non-conflicting directives that test simultaneous multi-window scheduling",
+      "description": "Note 0: Solar cleaning 11 AM to 2 PM, drop to 30% (factor=0.30, hours [11, 12, 13]). Note 1: No battery discharge 2 PM to 6 PM (hours [14, 15, 16, 17]). Note 2: Grid cap 120 kWh from 6 PM to 10 PM (hours [18, 19, 20, 21]). Designed with calibrated demand so the LP solves smoothly with zero constraint collisions.",
+      "operator_notes": [
+        "Rooftop solar maintenance will lower generation to 30% from 11 AM to 2 PM.",
+        "Preserve stored energy for the evening peak: no battery discharge allowed between 2 PM and 6 PM.",
+        "National grid sub-station advisory: cap grid import at 120 kWh per hour from 6 PM to 10 PM."
+      ],
+      "battery_override": {
+        "capacity_kwh": 400,
+        "initial_energy_kwh": 200,
+        "minimum_energy_kwh": 40,
+        "max_charge_kwh_per_hour": 80,
+        "max_discharge_kwh_per_hour": 80
+      },
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [11, 12, 13],
+            "factor": 0.3
+          },
+          "explanation": "Solar down to 30% (factor 0.30) from 11 AM to 2 PM."
+        },
+        {
+          "note_index": 1,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [14, 15, 16, 17]
+          },
+          "explanation": "No discharge from 2 PM to 6 PM."
+        },
+        {
+          "note_index": 2,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [18, 19, 20, 21],
+            "max_grid_kwh": 120.0
+          },
+          "explanation": "Max grid 120 kWh from 6 PM to 10 PM."
+        }
+      ],
+      "validation_rules": {
+        "note_0_directive": "solar_reduction",
+        "note_0_factor": 0.3,
+        "note_0_hours": [11, 12, 13],
+        "note_1_directive": "no_discharge_window",
+        "note_1_hours": [14, 15, 16, 17],
+        "note_2_directive": "max_grid_window",
+        "note_2_max_grid": 120.0,
+        "note_2_hours": [18, 19, 20, 21],
+        "must_be_feasible": true
+      }
+    }
+  ]
+}
