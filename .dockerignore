@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+*.pyc
+__pycache__
+.pytest_cache
+.venv
+venv
+env
+*.log
+guide_text.txt
+problem_text.txt
