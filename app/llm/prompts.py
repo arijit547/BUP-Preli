@@ -65,19 +65,54 @@ TIME WINDOW & PHRASE CONVENTIONS:
   - "overnight" / "overnight hours" -> [0, 1, 2, 3, 4, 5]
 - Specific intervals:
   - "from 2 PM to 5 PM": start 14, end 17 (17 EXCLUDED) -> [14, 15, 16]
+  - "from 3 PM to 6 PM": start 15, end 18 (18 EXCLUDED) -> [15, 16, 17]
+  - "from 5 PM to 9 PM": start 17, end 21 (21 EXCLUDED) -> [17, 18, 19, 20]
   - "from 8 AM to 10 AM" / "সকাল ৮টা থেকে ১০টা": start 8, end 10 -> [8, 9]
   - "from 10 AM to noon": start 10, end 12 -> [10, 11]
+  - "from 10 AM to 1 PM": start 10, end 13 -> [10, 11, 12]
   - "from noon to 2 PM" / "dupur 12 ta theke 2 ta" / "দুপুর ১২টা থেকে ২টা": start 12, end 14 -> [12, 13]
+  - "from 12 PM to 3 PM": start 12, end 15 -> [12, 13, 14]
   - "from 14 to 16": start 14, end 16 -> [14, 15]
+  - "from 18:00 to 22:00": start 18, end 22 -> [18, 19, 20, 21]
   - "from 6 PM to 8 PM" / "6 PM theke 8 PM": start 18, end 20 -> [18, 19]
   - "from 6 PM to 9 PM" / "18:00 to 21:00": start 18, end 21 -> [18, 19, 20]
   - "from 6 PM until 10 PM" / "6 PM to 10 PM": start 18, end 22 (10 PM is 22, excluded) -> [18, 19, 20, 21]
   - "from 7 PM to 9 PM" / "7 PM theke 9 PM" / "সন্ধ্যা ৭টা থেকে ৯টা" / "peak hours 19 to 21": start 19, end 21 -> [19, 20]
   - "from 7 PM until 10 PM" / "7 PM to 10 PM": start 19, end 22 -> [19, 20, 21]
+  - "12 PM to 2 PM and 6 PM to 8 PM": [12, 13, 18, 19]
   - "at hour 10": [10]
   - "at hour 18": [18]
   - "hour 20" / "during hour 20": [20]
   - "hour 22" / "during hour 22" / "রাত ১০টার সময়": [22]
+  - Midnight wrapping intervals (start inclusive, end exclusive, modulo 24 sorted):
+    * "4 hours before midnight (20:00) until 3 hours after midnight (03:00)": [0, 1, 2, 20, 21, 22, 23]
+    * "from 23:30 to 03:30" / "11 PM to 3 AM": [0, 1, 2, 23]
+    * "22:00 for 7 hours": [0, 1, 2, 3, 4, 22, 23]
+
+UNITS & ENGINEERING CONVERSIONS:
+- Megawatts (MW): 1 MW = 1,000 kW = 1,000 kWh per hour.
+  * "0.12 MW grid limit" -> max_grid_kwh: 120.0
+  * "0.075 MW" -> max_grid_kwh: 75.0
+- Megawatt-Hours (MWh): 1 MWh = 1,000 kWh.
+  * "0.18 MWh battery reserve" -> minimum_energy_kwh: 180.0 (an absolute energy limit, NOT a percentage of capacity!)
+- Watt-Hours (Wh): 1,000 Wh = 1 kWh.
+  * "85,000 Wh" -> max_grid_kwh: 85.0
+  * "160,000 Wh" -> minimum_energy_kwh: 160.0
+- kVA & Power Factor: Active Power (kW) = kVA * Power Factor.
+  * "100 kVA at 0.90 PF" -> 100 * 0.90 = 90.0 kW -> max_grid_kwh: 90.0
+
+REGIONAL DIALECTS (Sylheti, Chittagonian, Barisal, Sadhu):
+- Sylheti: "রাইত এগারোটা অইতে বিয়ান তিনটা তক" / "রাইত এগারোটা তাকি তিনটা" -> 11 PM to 3 AM -> [0, 1, 2, 23]
+- Chittagonian: "দুপুর বারোটা তন তিনটা" -> 12 PM to 3 PM -> [12, 13, 14]
+- Barisal: "রাইত ৮টা অইতে ১০টা তক" / "আইটটা থেইক্যা দশটা" -> 8 PM to 10 PM -> [20, 21]
+- Sadhu: "অপরাহ্ন ৩ ঘটিকা হইতে সায়াহ্ন ৬ ঘটিকা" -> 3 PM to 6 PM -> [15, 16, 17]
+
+NEGATION, HYPOTHETICAL & COMPOUND RULES:
+- Double Negations: "Under no circumstances should battery be prevented from discharging" = discharging is allowed, NO restriction -> directive_type: "no_op", applies: false.
+- Rejected Proposals & Rumors: "Supervisor proposed X, but chief engineer rejected it" -> rejected, no action -> "no_op", applies: false.
+- Ratio Derating: "2.5 times lower than normal" -> factor = 1 / 2.5 = 0.40.
+- Compound Sub-Arrays: When multiple solar sub-arrays derate by different percentages (e.g. Array A [40% cap] loses 75%, Array B [60% cap] loses 25%), ALWAYS combine into ONE single campus-wide solar_reduction directive with net weighted factor:
+  factor = (0.40 * (1 - 0.75)) + (0.60 * (1 - 0.25)) = 0.10 + 0.45 = 0.55!
 
 MULTI-DIRECTIVE EXTRACTION RULES:
 - A single note CAN contain multiple independent directives.
@@ -151,10 +186,17 @@ def build_user_prompt(operator_notes: list[str], battery_capacity_kwh: float) ->
         f"     * 'from 6 PM to 8 PM' -> [18, 19].\n"
         f"     * 'from 7 PM to 9 PM' / 'peak hours 19 to 21' -> [19, 20].\n"
         f"     * 'from 2 PM to 5 PM' -> 2 PM is 14, 5 PM is 17 -> [14, 15, 16].\n"
+        f"     * 'from 3 PM to 6 PM' -> 3 PM is 15, 6 PM is 18 -> [15, 16, 17].\n"
+        f"     * 'from 5 PM to 9 PM' / '17:00 to 21:00' -> 5 PM is 17, 9 PM is 21 -> [17, 18, 19, 20].\n"
+        f"     * 'from noon to 3 PM' / '12 PM to 3 PM' / '12:00 to 15:00' / '১২টা থেইক্কা ৩টা' -> [12, 13, 14].\n"
+        f"     * 'from 18:00 to 22:00' -> [18, 19, 20, 21].\n"
         f"     * 'from 8 AM to 10 AM' -> [8, 9].\n"
         f"     * 'from 10 AM to noon' -> [10, 11].\n"
         f"     * 'from noon to 2 PM' -> [12, 13].\n"
         f"     * 'from 14 to 16' -> [14, 15].\n"
+        f"     * '4 hours before midnight (20:00) until 3 hours after midnight (03:00)' -> [0, 1, 2, 20, 21, 22, 23].\n"
+        f"     * 'between 23:30 and 03:30' -> [0, 1, 2, 23].\n"
+        f"     * 'আইটটা থেইক্যা দশটা' / 'রাত ৮টা থেকে ১০টা' -> [20, 21].\n"
         f"     * 'at hour 10' -> [10]; 'hour 18' -> [18]; 'hour 20' -> [20]; 'hour 22' / 'রাত ১০টার সময়' -> [22].\n"
         f"   - Named period 'evening peak' = [18, 19, 20] ONLY applies when NO end hour is stated (e.g. 'during evening peak'). Do NOT use [18, 19, 20] if the note specifies until 10 PM.\n"
         f"   - 'overnight' / 'overnight hours' / 'Cloud er jonno solar kombe 30%' (when cloud hours are unspecified) -> [0, 1, 2, 3, 4, 5].\n"

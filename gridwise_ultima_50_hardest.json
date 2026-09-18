@@ -1,0 +1,1321 @@
+{
+  "metadata": {
+    "title": "GridWise ULTIMA-50 — 50 Hardest & Most Adversarial Test Cases",
+    "description": "50 cutting-edge adversarial tests covering double negations, fractional losses, midnight boundary wraps, MW/kVA unit conversions, counterfactuals, dialects (Sadhu, Sylheti, Chittagonian, Dhakaiya, Barisal), SCADA machine noise, and interlocking multi-note puzzles.",
+    "total_tests": 50,
+    "default_battery": {
+      "capacity_kwh": 400,
+      "initial_energy_kwh": 200,
+      "minimum_energy_kwh": 40,
+      "max_charge_kwh_per_hour": 80,
+      "max_discharge_kwh_per_hour": 80
+    }
+  },
+  "test_cases": [
+    {
+      "id": "ULT-01",
+      "title": "Double Negation on Battery Discharge Permission",
+      "category": "negation_trap",
+      "operator_notes": [
+        "Under no circumstances should the battery be prevented from discharging between 2 PM and 6 PM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Double negation: 'not prevented from discharging' means discharging is permitted. No restrictive directive."
+        }
+      ]
+    },
+    {
+      "id": "ULT-02",
+      "title": "Negated Prohibition on Grid Draw",
+      "category": "negation_trap",
+      "operator_notes": [
+        "It is strictly not forbidden to import grid power up to 90 kWh between 6 PM and 10 PM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ],
+            "max_grid_kwh": 90.0
+          },
+          "explanation": "Positive allowance up to 90 kWh means grid is capped at 90 kWh."
+        }
+      ]
+    },
+    {
+      "id": "ULT-03",
+      "title": "Double Negative Reserve Obligation ('Do not fail to maintain')",
+      "category": "negation_trap",
+      "operator_notes": [
+        "Do not fail to maintain a minimum 160 kWh battery reserve between 17:00 and 21:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              17,
+              18,
+              19,
+              20
+            ],
+            "minimum_energy_kwh": 160.0
+          },
+          "explanation": "'Do not fail to maintain' is a mandatory directive to keep 160 kWh reserve."
+        }
+      ]
+    },
+    {
+      "id": "ULT-04",
+      "title": "Never-Active Charging Restriction",
+      "category": "negation_trap",
+      "operator_notes": [
+        "Ensure that battery cell charging is at no point active between 10:00 and 13:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              10,
+              11,
+              12
+            ]
+          },
+          "explanation": "Charging never active = no_charge_window between 10:00 and 13:00."
+        }
+      ]
+    },
+    {
+      "id": "ULT-05",
+      "title": "Double Negative Modal of Obligation ('Cannot afford not to curtail')",
+      "category": "negation_trap",
+      "operator_notes": [
+        "With the inverter overheating, we cannot afford not to curtail solar generation by 60% from 11 AM to 2 PM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              11,
+              12,
+              13
+            ],
+            "factor": 0.4
+          },
+          "explanation": "'Cannot afford not to curtail by 60%' = curtail by 60% -> remaining factor 0.40."
+        }
+      ]
+    },
+    {
+      "id": "ULT-06",
+      "title": "Vulgar Fraction Loss ('Five-Eighths Lost')",
+      "category": "fraction_math",
+      "operator_notes": [
+        "Heavy particulate soiling has caused five-eighths of our solar generation potential to be lost from 11:00 to 14:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              11,
+              12,
+              13
+            ],
+            "factor": 0.375
+          },
+          "explanation": "5/8 lost = 3/8 remaining (factor 0.375) between 11:00 and 14:00."
+        }
+      ]
+    },
+    {
+      "id": "ULT-07",
+      "title": "Compound Sub-Array Weighted Derating",
+      "category": "compound_math",
+      "operator_notes": [
+        "Array A (40% capacity) loses 75% output, while Array B (60% capacity) loses 25% output between 12:00 and 15:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              12,
+              13,
+              14
+            ],
+            "factor": 0.55
+          },
+          "explanation": "Remaining = (0.40 * 0.25) + (0.60 * 0.75) = 0.10 + 0.45 = 0.55 factor."
+        }
+      ]
+    },
+    {
+      "id": "ULT-08",
+      "title": "Precise Derating to Three-Sixteenths",
+      "category": "fraction_math",
+      "operator_notes": [
+        "Severe shading from the new academic building limits rooftop solar to three-sixteenths of nominal rating from 13:00 to 16:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              13,
+              14,
+              15
+            ],
+            "factor": 0.1875
+          },
+          "explanation": "3/16 = 0.1875 remaining factor from 1 PM to 4 PM."
+        }
+      ]
+    },
+    {
+      "id": "ULT-09",
+      "title": "Extreme Percentage Plunge ('Plummets by 92.5%')",
+      "category": "extreme_derate",
+      "operator_notes": [
+        "Catastrophic dust storm: rooftop solar production plummets by 92.5 percent between 10 AM and 1 PM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              10,
+              11,
+              12
+            ],
+            "factor": 0.075
+          },
+          "explanation": "Plummets by 92.5% leaves 7.5% (factor 0.075)."
+        }
+      ]
+    },
+    {
+      "id": "ULT-10",
+      "title": "Ratio Divisor Derating ('2.5 Times Lower Than Normal')",
+      "category": "ratio_math",
+      "operator_notes": [
+        "Atmospheric smog will keep midday solar generation 2.5 times lower than normal from noon to 3 PM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              12,
+              13,
+              14
+            ],
+            "factor": 0.4
+          },
+          "explanation": "2.5 times lower = 1 / 2.5 = 0.40 factor."
+        }
+      ]
+    },
+    {
+      "id": "ULT-11",
+      "title": "Fractional Battery Reserve ('Seven-Tenths of Capacity')",
+      "category": "capacity_fraction",
+      "operator_notes": [
+        "Emergency grid alert: retain seven-tenths of total battery capacity in reserve between 18:00 and 22:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ],
+            "minimum_energy_kwh": 280.0
+          },
+          "explanation": "7/10 of 400 kWh = 280 kWh reserve."
+        }
+      ]
+    },
+    {
+      "id": "ULT-12",
+      "title": "Exact Fractional Reserve ('17.5% of Capacity')",
+      "category": "capacity_fraction",
+      "operator_notes": [
+        "Maintain a baseline reserve equal to exactly 17.5% of battery storage capacity throughout the evening (17:00 to 21:00)."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              17,
+              18,
+              19,
+              20
+            ],
+            "minimum_energy_kwh": 70.0
+          },
+          "explanation": "17.5% of 400 kWh = 70.0 kWh reserve."
+        }
+      ]
+    },
+    {
+      "id": "ULT-13",
+      "title": "Vulgar Fraction Reserve ('Three-Eighths of Full Capacity')",
+      "category": "capacity_fraction",
+      "operator_notes": [
+        "Reserve buffer must equal three-eighths of full battery energy capacity between 19:00 and 23:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              19,
+              20,
+              21,
+              22
+            ],
+            "minimum_energy_kwh": 150.0
+          },
+          "explanation": "3/8 of 400 kWh = 150.0 kWh reserve."
+        }
+      ]
+    },
+    {
+      "id": "ULT-14",
+      "title": "Asymmetric Midnight Span (4h Before to 3h After)",
+      "category": "midnight_wrap",
+      "operator_notes": [
+        "Substation transformer cooling: prohibit battery charging from 4 hours before midnight until 3 hours after midnight."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0,
+              1,
+              2,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          "explanation": "20:00 to 03:00 wraps across midnight -> sorted [0, 1, 2, 20, 21, 22, 23]."
+        }
+      ]
+    },
+    {
+      "id": "ULT-15",
+      "title": "Fractional Midnight Straddle (23:30 to 03:30)",
+      "category": "midnight_wrap",
+      "operator_notes": [
+        "Nighttime cable splicing requires no battery discharge between 23:30 and 03:30."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0,
+              1,
+              2,
+              23
+            ]
+          },
+          "explanation": "Hourly mapping covering the overnight window -> [0, 1, 2, 23]."
+        }
+      ]
+    },
+    {
+      "id": "ULT-16",
+      "title": "Duration-Based Overnight Span (22:00 for 7 Hours)",
+      "category": "midnight_wrap",
+      "operator_notes": [
+        "Substation maintenance begins at 22:00 and lasts for 7 consecutive hours, during which grid import cannot exceed 60 kWh."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              22,
+              23
+            ],
+            "max_grid_kwh": 60.0
+          },
+          "explanation": "22:00 for 7 hours = 22, 23, 0, 1, 2, 3, 4 -> sorted [0, 1, 2, 3, 4, 22, 23]."
+        }
+      ]
+    },
+    {
+      "id": "ULT-17",
+      "title": "Short Midnight Straddle (11 PM to 1 AM)",
+      "category": "midnight_wrap",
+      "operator_notes": [
+        "Block battery discharging from 11 PM to 1 AM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0,
+              23
+            ]
+          },
+          "explanation": "11 PM (hour 23) to 1 AM (hour 0) -> sorted [0, 23]."
+        }
+      ]
+    },
+    {
+      "id": "ULT-18",
+      "title": "Overnight Sunrise Span (10 PM to 6 AM)",
+      "category": "midnight_wrap",
+      "operator_notes": [
+        "Overnight charging freeze starting at 10 PM and running until 6 AM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              22,
+              23
+            ]
+          },
+          "explanation": "22:00 to 06:00 -> sorted [0, 1, 2, 3, 4, 5, 22, 23]."
+        }
+      ]
+    },
+    {
+      "id": "ULT-19",
+      "title": "Terminal Hour Horizon (23:00 to 00:00)",
+      "category": "midnight_wrap",
+      "operator_notes": [
+        "Single-hour boundary: battery discharge is prohibited strictly from 23:00 to 00:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              23
+            ]
+          },
+          "explanation": "Hour 23 only."
+        }
+      ]
+    },
+    {
+      "id": "ULT-20",
+      "title": "Origin Hour Horizon (00:00 to 01:00)",
+      "category": "midnight_wrap",
+      "operator_notes": [
+        "Beginning at 00:00 midnight and ending at 01:00, cap grid import at 50 kWh."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0
+            ],
+            "max_grid_kwh": 50.0
+          },
+          "explanation": "Hour 0 only."
+        }
+      ]
+    },
+    {
+      "id": "ULT-21",
+      "title": "Megawatt to Hourly kWh Conversion (0.12 MW)",
+      "category": "unit_conversion",
+      "operator_notes": [
+        "Limit total campus grid intake to 0.12 MW per hour between 18:00 and 22:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ],
+            "max_grid_kwh": 120.0
+          },
+          "explanation": "0.12 MW = 120 kW = 120 kWh per hour."
+        }
+      ]
+    },
+    {
+      "id": "ULT-22",
+      "title": "kVA at Power Factor to Active Power kW",
+      "category": "unit_conversion",
+      "operator_notes": [
+        "Transformer feeder T-1 apparent power cap is 100 kVA at 0.90 lagging power factor between 17:00 and 21:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              17,
+              18,
+              19,
+              20
+            ],
+            "max_grid_kwh": 90.0
+          },
+          "explanation": "100 kVA * 0.90 = 90 kW = 90 kWh/h active power limit."
+        }
+      ]
+    },
+    {
+      "id": "ULT-23",
+      "title": "Megawatt-Hour to kWh Battery Reserve (0.18 MWh)",
+      "category": "unit_conversion",
+      "operator_notes": [
+        "Battery cells must retain at least 0.18 MWh in reserve between 18:00 and 22:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ],
+            "minimum_energy_kwh": 180.0
+          },
+          "explanation": "0.18 MWh = 180 kWh reserve."
+        }
+      ]
+    },
+    {
+      "id": "ULT-24",
+      "title": "Watt-Hours to kWh Grid Limit (85,000 Wh)",
+      "category": "unit_conversion",
+      "operator_notes": [
+        "Grid import cannot exceed 85,000 Watt-hours in any hour between 19:00 and 22:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              19,
+              20,
+              21
+            ],
+            "max_grid_kwh": 85.0
+          },
+          "explanation": "85,000 Wh = 85.0 kWh."
+        }
+      ]
+    },
+    {
+      "id": "ULT-25",
+      "title": "Substation MW Feeder Ceiling (0.075 MW)",
+      "category": "unit_conversion",
+      "operator_notes": [
+        "No grid intake beyond 0.075 MW from 18:00 to 21:00 due to overhead line sag."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20
+            ],
+            "max_grid_kwh": 75.0
+          },
+          "explanation": "0.075 MW = 75.0 kWh/h."
+        }
+      ]
+    },
+    {
+      "id": "ULT-26",
+      "title": "Watt-Hour Reserve Buffer (160,000 Wh)",
+      "category": "unit_conversion",
+      "operator_notes": [
+        "Maintain stored energy strictly above 160,000 Wh between 17:00 and 20:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              17,
+              18,
+              19
+            ],
+            "minimum_energy_kwh": 160.0
+          },
+          "explanation": "160,000 Wh = 160.0 kWh reserve."
+        }
+      ]
+    },
+    {
+      "id": "ULT-27",
+      "title": "Counterfactual Frequency Drop Trap",
+      "category": "counterfactual",
+      "operator_notes": [
+        "Had the grid frequency dipped below 49.5 Hz we would have capped grid import at 60 kWh, but frequency remained steady at 50 Hz today."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Counterfactual statement with unmet condition. No operational directive."
+        }
+      ]
+    },
+    {
+      "id": "ULT-28",
+      "title": "Rejected Shift Proposal",
+      "category": "rejected_proposal",
+      "operator_notes": [
+        "The junior technician suggested keeping 200 kWh reserve tonight. That idea was formally rejected during the 4 PM shift briefing."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Explicitly rejected suggestion. Standard operations apply (no_op)."
+        }
+      ]
+    },
+    {
+      "id": "ULT-29",
+      "title": "Mid-Sentence Cancellation and Replacement",
+      "category": "retraction",
+      "operator_notes": [
+        "Initially we mandated zero charging from 1 PM to 4 PM, but disregard that completely; however, rooftop panel cleaning from 10 AM to 1 PM will halve generation."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              10,
+              11,
+              12
+            ],
+            "factor": 0.5
+          },
+          "explanation": "Charging ban was retracted; confirmed directive is solar cleaning 10 AM-1 PM factor 0.5."
+        }
+      ]
+    },
+    {
+      "id": "ULT-30",
+      "title": "Reinstated Dispatch Order",
+      "category": "reinstated_order",
+      "operator_notes": [
+        "We had revoked the 7 PM to 10 PM grid cap, but the chief dispatcher just re-issued it: strictly keep grid intake below 90 units."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              19,
+              20,
+              21
+            ],
+            "max_grid_kwh": 90.0
+          },
+          "explanation": "Grid cap re-issued: 7 PM to 10 PM max 90 units."
+        }
+      ]
+    },
+    {
+      "id": "ULT-31",
+      "title": "If-and-Only-If Unmet Threshold",
+      "category": "unmet_conditional",
+      "operator_notes": [
+        "If and only if the substation transformer oil temp exceeds 75C should you cap grid at 70 kWh. Oil temp is currently nominal at 38C."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Condition (temp > 75C) was not met. No directive applies."
+        }
+      ]
+    },
+    {
+      "id": "ULT-32",
+      "title": "Deferred Testing Maintenance Notice",
+      "category": "deferred_action",
+      "operator_notes": [
+        "Do not implement the scheduled 2 PM to 5 PM charging pause as testing has been deferred to next month."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Testing was deferred to next month. No directive for today."
+        }
+      ]
+    },
+    {
+      "id": "ULT-33",
+      "title": "Rumor Debunking Notice",
+      "category": "rumor_debunk",
+      "operator_notes": [
+        "Staff notice: please disregard any rumors regarding limiting campus grid import today; substation runs under normal limits."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Debunking rumor; standard operations continue (no_op)."
+        }
+      ]
+    },
+    {
+      "id": "ULT-34",
+      "title": "Informational Tariff Outlook",
+      "category": "informational_future",
+      "operator_notes": [
+        "Energy commission briefing: national grid peak surcharge will rise by 15% starting next fiscal year."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null,
+          "explanation": "Future tariff news with no action for today's 24-hour dispatch schedule."
+        }
+      ]
+    },
+    {
+      "id": "ULT-35",
+      "title": "Code-Switching Transformer Hazard Window",
+      "category": "code_switching",
+      "operator_notes": [
+        "Transformer overheating risk er jonno shondha 6:30 theke raat 9:30 porjonto grid theke 85 unit er beshi import kora strictly prohibited."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ],
+            "max_grid_kwh": 85.0
+          },
+          "explanation": "Evening window 18:00 to 22:00 max grid 85 kWh."
+        }
+      ]
+    },
+    {
+      "id": "ULT-36",
+      "title": "Sadhu Bhasha Formal Discharge Embargo",
+      "category": "sadhu_bhasha",
+      "operator_notes": [
+        "অদ্য অপরাহ্ন ৩ ঘটিকা হইতে অপরাহ্ন ৬ ঘটিকা পর্যন্ত ব্যাটারি হইতে বিদ্যুৎ নিঃসরণ সম্পূর্ণরূপে নিষিদ্ধ থাকিবে।"
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              15,
+              16,
+              17
+            ]
+          },
+          "explanation": "3 PM to 6 PM (hours 15, 16, 17) no discharge in formal Sadhu Bengali."
+        }
+      ]
+    },
+    {
+      "id": "ULT-37",
+      "title": "Sylheti Overnight Charge Freeze",
+      "category": "sylheti_dialect",
+      "operator_notes": [
+        "আইজকা রাইত এগারোটা অইতে বিয়ান তিনটা তক ব্যাটারি চার্জ করন পুরাপুরি বন্ধ রাখবা।"
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0,
+              1,
+              2,
+              23
+            ]
+          },
+          "explanation": "11 PM to 3 AM in Sylheti dialect = hours [0, 1, 2, 23] no charge."
+        }
+      ]
+    },
+    {
+      "id": "ULT-38",
+      "title": "Chittagonian Midday Solar Wash",
+      "category": "chittagonian_dialect",
+      "operator_notes": [
+        "সোলার প্যানেল পরিষ্কার চলিবু দুপুর বারোটা তন তিনটা, উৎপাদন আড়াই আনা (২৫%) অইবো।"
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              12,
+              13,
+              14
+            ],
+            "factor": 0.25
+          },
+          "explanation": "Chittagonian dialect 12 to 3 PM solar factor 0.25."
+        }
+      ]
+    },
+    {
+      "id": "ULT-39",
+      "title": "Dhakaiya Kutti Evening Discharge Lock",
+      "category": "dhakaiya_dialect",
+      "operator_notes": [
+        "আরে ভাই, সন্ধ্যা ৭টা থেইকা রাত ১০টা তক ব্যাটারির কোনো ডিসচার্জ হইবো না, একদম ফুল লক।"
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              19,
+              20,
+              21
+            ]
+          },
+          "explanation": "Dhakaiya dialect 7 PM to 10 PM no battery discharge."
+        }
+      ]
+    },
+    {
+      "id": "ULT-40",
+      "title": "Barisal Dialect Night Grid Cap",
+      "category": "barisal_dialect",
+      "operator_notes": [
+        "আইজগো রাইত ৮টা অইতে ১০টা তক গ্রিড দিয়া ৭০ ইউনিটের বেশি আনা যাইবে না।"
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              20,
+              21
+            ],
+            "max_grid_kwh": 70.0
+          },
+          "explanation": "Barisal dialect 8 PM to 10 PM max grid 70 kWh."
+        }
+      ]
+    },
+    {
+      "id": "ULT-41",
+      "title": "Military Time Banglish Solar Dip",
+      "category": "military_banglish",
+      "operator_notes": [
+        "0900 theke 1300 hours porjonto solar output e 60% dip ashbe dust storm er karone."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              9,
+              10,
+              11,
+              12
+            ],
+            "factor": 0.4
+          },
+          "explanation": "09:00 to 13:00 dip by 60% = factor 0.40."
+        }
+      ]
+    },
+    {
+      "id": "ULT-42",
+      "title": "Banglish Disjoint Charging Block",
+      "category": "disjoint_banglish",
+      "operator_notes": [
+        "Dupur 12-2pm and shondha 6-8pm battery charging bondho thakbe."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              12,
+              13,
+              18,
+              19
+            ]
+          },
+          "explanation": "Disjoint hours [12, 13, 18, 19] no charging."
+        }
+      ]
+    },
+    {
+      "id": "ULT-43",
+      "title": "Tri-Directive Chained Continuity Puzzle",
+      "category": "multi_note_puzzle",
+      "operator_notes": [
+        "Solar washing from 11 AM to 2 PM reduces PV yield to 30%.",
+        "Prohibit battery discharge from 2 PM to 5 PM.",
+        "Cap grid intake at 115 kWh from 5 PM to 9 PM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              11,
+              12,
+              13
+            ],
+            "factor": 0.3
+          }
+        },
+        {
+          "note_index": 1,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              14,
+              15,
+              16
+            ]
+          }
+        },
+        {
+          "note_index": 2,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              17,
+              18,
+              19,
+              20
+            ],
+            "max_grid_kwh": 115.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "ULT-44",
+      "title": "Reserve Buffer with Interleaved Cafeteria Distractor",
+      "category": "multi_note_distractor",
+      "operator_notes": [
+        "Maintain at least 150 kWh battery storage reserve between 18:00 and 22:00.",
+        "Cafeteria menu committee will convene in room 204 at 1 PM tomorrow.",
+        "No battery charging permitted from 14:00 to 17:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ],
+            "minimum_energy_kwh": 150.0
+          }
+        },
+        {
+          "note_index": 1,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null
+        },
+        {
+          "note_index": 2,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              14,
+              15,
+              16
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ULT-45",
+      "title": "Complementary Two-Stage Solar Degradation",
+      "category": "multi_note_solar",
+      "operator_notes": [
+        "Morning haze reduces solar harvest by 30% between 09:00 and 12:00.",
+        "Afternoon dust storm leaves solar operating at only 30% of nominal capacity from 12:00 to 15:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              9,
+              10,
+              11
+            ],
+            "factor": 0.7
+          }
+        },
+        {
+          "note_index": 1,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              12,
+              13,
+              14
+            ],
+            "factor": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "id": "ULT-46",
+      "title": "Double Distractor Sandwiching Real Substation Limit",
+      "category": "multi_note_distractor",
+      "operator_notes": [
+        "Vice Chancellor announced expansion of campus renewable microgrid research wing.",
+        "Substation thermal limit: grid import must not exceed 95 units per hour from 18:00 to 21:00.",
+        "Student council voting will be conducted in the sports complex this evening."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null
+        },
+        {
+          "note_index": 1,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20
+            ],
+            "max_grid_kwh": 95.0
+          }
+        },
+        {
+          "note_index": 2,
+          "directive_type": "no_op",
+          "applies": false,
+          "structured_adjustment": null
+        }
+      ]
+    },
+    {
+      "id": "ULT-47",
+      "title": "Concurrent Reserve and Discharge Lock During Same Hours",
+      "category": "multi_note_compatible",
+      "operator_notes": [
+        "Hold at least 175 kWh in battery reserve between 18:00 and 22:00.",
+        "Block all battery discharging during those exact same evening hours, 18:00 to 22:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ],
+            "minimum_energy_kwh": 175.0
+          }
+        },
+        {
+          "note_index": 1,
+          "directive_type": "no_discharge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ULT-48",
+      "title": "Telemetry SCADA Alarm Format Pair",
+      "category": "scada_multi_note",
+      "operator_notes": [
+        "[SCADA_EVENT_10:15] INVERTER_WARNING: Rooftop array derating to 40% between 11:00 and 14:00.",
+        "[SCADA_EVENT_16:30] FEEDER_ALERT: Substation T-1 import constrained to 80 kWh from 18:00 to 21:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              11,
+              12,
+              13
+            ],
+            "factor": 0.4
+          }
+        },
+        {
+          "note_index": 1,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20
+            ],
+            "max_grid_kwh": 80.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "ULT-49",
+      "title": "Dual Midnight Straddle Interaction",
+      "category": "multi_note_midnight",
+      "operator_notes": [
+        "Overnight charging ban: avoid battery charging from 10 PM to 2 AM.",
+        "Nighttime grid cap: limit grid import to 65 kWh from 11 PM to 4 AM."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "no_charge_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0,
+              1,
+              22,
+              23
+            ]
+          }
+        },
+        {
+          "note_index": 1,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              23
+            ],
+            "max_grid_kwh": 65.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "ULT-50",
+      "title": "The Grand Finale — Tri-Channel Orchestration",
+      "category": "grand_finale",
+      "operator_notes": [
+        "Midday dust accumulation brings solar generation down to one-fourth between 11:00 and 14:00.",
+        "Preserve evening storage buffer: maintain at least 160 kWh in reserve from 17:00 to 21:00.",
+        "National grid transmission corridor constraint: cap grid intake at 120 kWh per hour from 18:00 to 22:00."
+      ],
+      "expected_directives": [
+        {
+          "note_index": 0,
+          "directive_type": "solar_reduction",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              11,
+              12,
+              13
+            ],
+            "factor": 0.25
+          }
+        },
+        {
+          "note_index": 1,
+          "directive_type": "minimum_battery_reserve",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              17,
+              18,
+              19,
+              20
+            ],
+            "minimum_energy_kwh": 160.0
+          }
+        },
+        {
+          "note_index": 2,
+          "directive_type": "max_grid_window",
+          "applies": true,
+          "structured_adjustment": {
+            "hours": [
+              18,
+              19,
+              20,
+              21
+            ],
+            "max_grid_kwh": 120.0
+          }
+        }
+      ]
+    }
+  ]
+}

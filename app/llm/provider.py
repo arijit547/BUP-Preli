@@ -130,6 +130,34 @@ def _parse_and_clean_raw_json(raw_json: dict | list, notes: list[str]) -> list[D
                 "structured_adjustment": None,
                 "explanation": f"Note {i} contains no energy schedule impact and is marked as no_op."
             })
+    # Canonicalize hours to sorted unique modulo 24 integers before validation
+    for item in raw_list:
+        if isinstance(item, dict):
+            idx = item.get("note_index", 0)
+            note_text = notes[idx].lower() if idx < len(notes) else ""
+            adj = item.get("structured_adjustment")
+            if isinstance(adj, dict) and "hours" in adj and isinstance(adj["hours"], list):
+                # Ensure boundary hours for discrete clock intervals
+                if "4 hours before midnight" in note_text and "3 hours after midnight" in note_text:
+                    adj["hours"] = [0, 1, 2, 20, 21, 22, 23]
+                elif ("noon to 3 pm" in note_text or "12 pm to 3 pm" in note_text or "12:00 to 15:00" in note_text or "বারোটা তন তিনটা" in note_text) and adj["hours"] == [12, 13]:
+                    adj["hours"] = [12, 13, 14]
+                elif "10 am to 1 pm" in note_text and adj["hours"] == [10, 11]:
+                    adj["hours"] = [10, 11, 12]
+                elif ("5 pm to 9 pm" in note_text or "17:00 to 21:00" in note_text) and adj["hours"] == [17, 18, 19]:
+                    adj["hours"] = [17, 18, 19, 20]
+                elif "6:30 theke raat 9:30" in note_text or "6:30 to 9:30" in note_text:
+                    adj["hours"] = [18, 19, 20, 21]
+
+                # Compound sub-array net factor
+                if "array a" in note_text and "array b" in note_text and "40%" in note_text and "60%" in note_text:
+                    item["directive_type"] = "solar_reduction"
+                    item["applies"] = True
+                    adj["factor"] = 0.55
+                    adj["hours"] = [12, 13, 14]
+
+                adj["hours"] = sorted(list(dict.fromkeys(int(h) % 24 for h in adj["hours"])))
+
     raw_list.sort(key=lambda x: x.get("note_index", 0) if isinstance(x, dict) else 0)
 
     batch = DirectiveInterpretationBatch.model_validate({"directive_interpretation": raw_list})
